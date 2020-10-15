@@ -72,11 +72,13 @@ async function main() {
       startRsvpButton.textContent = "LOGOUT";
       guestbookContainer.style.display = "block";
       subcribeGuestbook();
+      subscriberCurrentRSVP(user);
     }
     else {
       startRsvpButton.textContent = "RSVP";
       guestbookContainer.style.display = "none";
       unsubscribeGuestbook();
+      unsubscribeCurrentRSVP();
     }
   });
 
@@ -102,7 +104,7 @@ async function main() {
       guestbook.innerHTML = "";
 
       snaps.forEach((doc) => {
-        console.log(doc.data());
+        //console.log(doc.data());
 
         const entry = document.createElement("p");
         entry.textContent = doc.data().name + ": " + doc.data().text;
@@ -116,6 +118,60 @@ async function main() {
       guestbookListener();
       guestbookListener = null;
     }
+  }
+
+
+  rsvpYes.onclick = () => {
+    const userDoc = firebase.firestore().collection("attendees").doc(firebase.auth().currentUser.uid);
+
+    userDoc.set({
+      attending: true
+
+    }).catch(console.error);
+  }
+
+  rsvpNo.onclick = () => {
+    const userDoc = firebase.firestore().collection("attendees").doc(firebase.auth().currentUser.uid);
+
+    userDoc.set({
+      attending: false
+
+    }).catch(console.error);
+  }
+
+  firebase.firestore().collection("attendees")
+  .where("attending", "==", true)
+  .onSnapshot(snap => {
+    const newAttendeeCount = snap.docs.length;
+
+    numberAttending.innerHTML = newAttendeeCount + " people going";
+  })
+
+  function subscriberCurrentRSVP(user) {
+    rsvpListener = firebase.firestore().collection("attendees").doc(user.uid)
+    .onSnapshot((doc) => {
+      if (doc && doc.data()) {
+        const attendingResponse = doc.data().attending;
+
+        if (attendingResponse) {
+          rsvpYes.className = "clicked";
+          rsvpNo.className = "";
+        }
+        else {
+          rsvpYes.className = "";
+          rsvpNo.className = "clicked";
+        }
+      }
+    });
+  }
+
+  function unsubscribeCurrentRSVP() {
+    if (rsvpListener != null) {
+      rsvpListener();
+      rsvpListener = null;
+    }
+    rsvpYes.className = "";
+    rsvpNo.className = "";
   }
 }
 main();
